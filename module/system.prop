@@ -1,0 +1,7 @@
+ro.build.display.id=BlissOS v1.0 (BlissOw Edition)
+ro.bliss.version=1.0
+ro.bliss.developer=BlissOw
+ro.bliss.edition=Pure Minimalist
+debug.sf.hw=1
+debug.egl.hw=1
+persist.sys.scrollingcache=3
