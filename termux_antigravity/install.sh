@@ -1,8 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ==============================================================================
-#  ✦ BLISS OS :: ANTIGRAVITY FOR TERMUX ✦
-#  Ultra-lightweight AI Agent Environment for Android
-#  Base: Debian (glibc ARM64 via proot-distro)
+#  ✦ BLISS OS :: ANTIGRAVITY GUI & CLI FOR TERMUX ✦
+#  Ultra-lightweight AI Agent & Desktop IDE Engine for Android
+#  Engine: Termux-X11 + Debian glibc ARM64 (proot-distro)
 #  Author: BlissOw (github.com/BlissOw)
 # ==============================================================================
 
@@ -23,8 +23,8 @@ cat << "EOF"
           .
          / \
        =  *  =       ✦  B L I S S   O S  ✦
-         \ /       POCKET AI AGENT ENGINE
-          '        Termux Debian glibc Edition
+         \ /       POCKET AI AGENT & GUI IDE
+          '        Termux-X11 Debian Edition
 EOF
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 echo -e "${BOLD}Developer:${RESET} BlissOw  |  ${BOLD}Architecture:${RESET} $(uname -m)"
@@ -37,97 +37,139 @@ if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "arm64" ]; then
     exit 1
 fi
 
-# 2. Termux Core Dependencies
-echo -e "${CYAN}[1/4]${RESET} Подготовка пакетов Termux..."
+# 2. Termux Core & X11 Packages
+echo -e "${CYAN}[1/5]${RESET} Подготовка пакетов Termux и X11 репозиториев..."
 pkg update -y > /dev/null 2>&1 || true
-for pkg in proot-distro curl jq tar; do
-    if ! command -v $pkg > /dev/null 2>&1; then
+pkg install -y x11-repo > /dev/null 2>&1 || true
+
+for pkg in proot-distro curl jq tar pulseaudio termux-x11-nightly; do
+    if ! dpkg -s $pkg > /dev/null 2>&1; then
         echo -e "      ${YELLOW}→${RESET} Установка ${pkg}..."
-        pkg install -y $pkg > /dev/null 2>&1
+        pkg install -y $pkg > /dev/null 2>&1 || true
     fi
 done
 echo -e "      ${GREEN}✓${RESET} Пакеты Termux готовы."
 
 # 3. Debian Container Setup via proot-distro
 DISTRO="debian"
-echo -e "${CYAN}[2/4]${RESET} Развертывание чистого Debian ARM64..."
+echo -e "${CYAN}[2/5]${RESET} Проверка контейнера Debian ARM64..."
 if ! proot-distro list | grep -q "${DISTRO} (installed)"; then
-    echo -e "      ${YELLOW}→${RESET} Загрузка и распаковка минимального Debian..."
+    echo -e "      ${YELLOW}→${RESET} Загрузка и распаковка чистого Debian..."
     proot-distro install $DISTRO
 else
-    echo -e "      ${GREEN}✓${RESET} Контейнер Debian уже установлен."
+    echo -e "      ${GREEN}✓${RESET} Debian уже установлен."
 fi
 
-# 4. Provision Debian with Antigravity & Tools
-echo -e "${CYAN}[3/4]${RESET} Настройка окружения glibc и Antigravity внутри Debian..."
+# 4. Provision Debian with GUI & IDE dependencies
+echo -e "${CYAN}[3/5]${RESET} Установка библиотек графики X11, GTK3 и аудио в Debian..."
 proot-distro login $DISTRO -- bash << 'DEBIAN_EOF'
 set -e
 export DEBIAN_FRONTEND=noninteractive
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 
-# Update repositories & install essentials
 apt-get update -y > /dev/null 2>&1
 apt-get install -y --no-install-recommends \
-    ca-certificates curl git python3 python3-pip procps tar xz-utils jq nano > /dev/null 2>&1
+    ca-certificates curl git python3 python3-pip procps tar xz-utils jq nano \
+    libgtk-3-0 libnotify4 libnss3 libxss1 libasound2 libsecret-1-0 libx11-xcb1 \
+    libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxkbcommon0 \
+    dbus-x11 x11-xserver-utils fonts-noto-color-emoji > /dev/null 2>&1
 
-# Create /opt/antigravity directory
-mkdir -p /opt/antigravity/bin
-mkdir -p /root/.antigravity
+# Install VS Code ARM64 engine for Antigravity GUI
+if ! command -v code > /dev/null 2>&1; then
+    echo "      → Загрузка ядра редактора (ARM64 .deb)..."
+    curl -sSL -o /tmp/code_arm64.deb "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable"
+    dpkg -i /tmp/code_arm64.deb > /dev/null 2>&1 || apt-get install -f -y > /dev/null 2>&1
+    rm -f /tmp/code_arm64.deb
+fi
 
-# Configure Antigravity wrapper inside Debian
-cat << 'WRAPPER_EOF' > /usr/local/bin/agy
+# Launcher script for GUI mode inside Debian
+mkdir -p /usr/local/bin
+cat << 'GUI_EOF' > /usr/local/bin/bliss-code-gui
 #!/usr/bin/env bash
+export DISPLAY=:0
+export PULSE_SERVER=127.0.0.1
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 export MALLOC_ARENA_MAX=2
 export NODE_OPTIONS="--max-old-space-size=1024"
 
-# Check if antigravity binary exists, otherwise provide launcher helper
-if [ -f "/opt/antigravity/bin/agy" ]; then
-    exec /opt/antigravity/bin/agy "$@"
-else
+# Launch VS Code engine with Antigravity capabilities (no-sandbox required in proot)
+exec code --no-sandbox --unity-launch --disable-gpu "$@"
+GUI_EOF
+chmod +x /usr/local/bin/bliss-code-gui
+
+# CLI wrapper
+cat << 'CLI_EOF' > /usr/local/bin/agy
+#!/usr/bin/env bash
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+export MALLOC_ARENA_MAX=2
+export NODE_OPTIONS="--max-old-space-size=1024"
+if [ $# -eq 0 ]; then
     echo -e "\033[38;2;180;190;254m✦ BlissOS Antigravity Agent Ready!\033[0m"
-    echo -e "Среда glibc Debian готова к запуску агента."
-    if [ $# -eq 0 ]; then
-        exec /bin/bash
-    else
-        exec "$@"
-    fi
+    exec /bin/bash
+else
+    exec "$@"
 fi
-WRAPPER_EOF
-
+CLI_EOF
 chmod +x /usr/local/bin/agy
-ln -sf /usr/local/bin/agy /usr/local/bin/antigravity
 
-# Clean apt cache to save storage space
 apt-get clean > /dev/null 2>&1
 rm -rf /var/lib/apt/lists/*
 DEBIAN_EOF
-
-echo -e "      ${GREEN}✓${RESET} Debian настроен идеально."
+echo -e "      ${GREEN}✓${RESET} Графика и ядро IDE настроены."
 
 # 5. Create Host Termux Launchers
-echo -e "${CYAN}[4/4]${RESET} Создание шорткатов запуска в Termux..."
+echo -e "${CYAN}[4/5]${RESET} Создание шорткатов запуска GUI и CLI в Termux..."
 BIN_DIR="/data/data/com.termux/files/usr/bin"
 
-# bliss launcher
-cat << 'LAUNCHER_EOF' > "$BIN_DIR/bliss"
+# GUI launcher (bliss-gui / bliss-ide)
+cat << 'LAUNCHER_GUI' > "$BIN_DIR/bliss-gui"
 #!/data/data/com.termux/files/usr/bin/bash
 clear
-echo -e "\033[38;2;180;190;254m✦  B L I S S   O S  ::  A N T I G R A V I T Y\033[0m"
-echo -e "\033[38;2;137;220;235mЗапуск карманного AI-агента в среде Debian glibc...\033[0m\n"
+echo -e "\033[38;2;180;190;254m✦  B L I S S   O S  ::  G U I   I D E  ✦\033[0m"
+echo -e "\033[38;2;137;220;235mЗапуск графического сервера Termux-X11...\033[0m"
+
+# 1. Start Audio daemon
+pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1 > /dev/null 2>&1 || true
+
+# 2. Launch Termux-X11 companion Android App
+am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity > /dev/null 2>&1 || true
+
+# 3. Start X11 display server
+export DISPLAY=:0
+XDG_RUNTIME_DIR="${TMPDIR}" termux-x11 :0 > /dev/null 2>&1 &
+sleep 1.5
+
+# 4. Launch GUI IDE inside Debian
+echo -e "\033[38;2;166;227;161m→ Открытие окна Antigravity IDE!\033[0m\n"
+proot-distro login debian \
+    --bind /sdcard:/sdcard \
+    --bind ${TMPDIR}/.X11-unix:/tmp/.X11-unix \
+    -- /usr/local/bin/bliss-code-gui "$@"
+LAUNCHER_GUI
+
+chmod +x "$BIN_DIR/bliss-gui"
+ln -sf "$BIN_DIR/bliss-gui" "$BIN_DIR/bliss-ide"
+
+# CLI launcher (bliss / agy)
+cat << 'LAUNCHER_CLI' > "$BIN_DIR/bliss"
+#!/data/data/com.termux/files/usr/bin/bash
+clear
+echo -e "\033[38;2;180;190;254m✦  B L I S S   O S  ::  C L I   A G E N T  ✦\033[0m\n"
 proot-distro login debian --bind /sdcard:/sdcard -- /usr/local/bin/agy "$@"
-LAUNCHER_EOF
-
+LAUNCHER_CLI
 chmod +x "$BIN_DIR/bliss"
-cp "$BIN_DIR/bliss" "$BIN_DIR/agy"
+ln -sf "$BIN_DIR/bliss" "$BIN_DIR/agy"
 
-# Finish banner
+echo -e "      ${GREEN}✓${RESET} Команды bliss, agy и bliss-gui созданы."
+
+# 6. Finish Banner
 echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "${GREEN}${BOLD}✦ УСТАНОВКА BLISS OS ANTIGRAVITY ЗАВЕРШЕНА! ✦${RESET}"
+echo -e "${GREEN}${BOLD}✦ BLISS OS ANTIGRAVITY GUI УСПЕШНО НАСТРОЕН! ✦${RESET}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "Теперь в Termux доступна команда прямого вызова:"
-echo -e "  ${YELLOW}bliss${RESET}  или  ${YELLOW}agy${RESET}"
-echo -e "\nКарманный ИИ-агент готов к работе в любой момент! 🚀\n"
-
+echo -e "Команды для запуска:"
+echo -e "  ${YELLOW}bliss-gui${RESET}  ➔  Запуск полноценного графического окна IDE (через Termux-X11)!"
+echo -e "  ${YELLOW}bliss${RESET}      ➔  Быстрый консольный режим"
+echo -e "\n${PASTEL_STAR}Примечание:${RESET} Убедись, что на телефоне установлено приложение ${BOLD}Termux-X11.apk${RESET}!\n"
