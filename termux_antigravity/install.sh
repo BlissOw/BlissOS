@@ -81,10 +81,14 @@ apt-get install -y libasound2 || apt-get install -y libasound2t64 || true
 
 # Install VS Code ARM64 engine for Antigravity GUI
 if ! command -v code > /dev/null 2>&1; then
-    echo "      → Загрузка ядра редактора (ARM64 .deb)..."
-    curl -sSL -o /tmp/code_arm64.deb "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable"
+    echo "      → Загрузка ядра редактора VS Code ARM64 (~228 МБ)..."
+    curl -# -L --retry 3 --connect-timeout 20 -C - -o /tmp/code_arm64.deb "https://update.code.visualstudio.com/latest/linux-deb-arm64/stable"
+    echo "      → Распаковка и установка ядра в систему (eMMC)..."
     dpkg -i /tmp/code_arm64.deb > /dev/null 2>&1 || apt-get install -f -y > /dev/null 2>&1
     rm -f /tmp/code_arm64.deb
+    sync
+else
+    echo "      ✓ Ядро редактора уже установлено."
 fi
 
 # Launcher script for GUI mode inside Debian
