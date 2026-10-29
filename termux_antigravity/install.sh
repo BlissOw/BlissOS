@@ -102,8 +102,9 @@ export LC_ALL=C.UTF-8
 export MALLOC_ARENA_MAX=2
 export NODE_OPTIONS="--max-old-space-size=1024"
 
-# Launch VS Code engine with Antigravity capabilities (no-sandbox required in proot)
-exec code --no-sandbox --unity-launch --disable-gpu "$@"
+# Launch VS Code engine with Antigravity capabilities (no-sandbox & user-data-dir required for root in proot)
+mkdir -p /root/.config/Code
+exec code --no-sandbox --user-data-dir /root/.config/Code --unity-launch --disable-gpu "$@"
 GUI_EOF
 chmod +x /usr/local/bin/bliss-code-gui
 
@@ -147,14 +148,18 @@ am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity > /dev/null 2>&1
 
 # 3. Start X11 display server
 export DISPLAY=:0
-XDG_RUNTIME_DIR="${TMPDIR}" termux-x11 :0 > /dev/null 2>&1 &
-sleep 1.5
+TMPDIR="${TMPDIR:-/data/data/com.termux/files/usr/tmp}"
+mkdir -p "${TMPDIR}/.X11-unix"
+if ! pgrep -f "termux-x11 :0" > /dev/null 2>&1; then
+    XDG_RUNTIME_DIR="${TMPDIR}" termux-x11 :0 -ac > /dev/null 2>&1 &
+    sleep 2
+fi
 
 # 4. Launch GUI IDE inside Debian
 echo -e "\033[38;2;166;227;161m→ Открытие окна Antigravity IDE!\033[0m\n"
 proot-distro login debian \
     --bind /sdcard:/sdcard \
-    --bind ${TMPDIR}/.X11-unix:/tmp/.X11-unix \
+    --bind "${TMPDIR}/.X11-unix:/tmp/.X11-unix" \
     -- /usr/local/bin/bliss-code-gui "$@"
 LAUNCHER_GUI
 
