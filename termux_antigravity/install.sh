@@ -50,12 +50,11 @@ for pkg in proot-distro curl jq tar pulseaudio termux-x11-nightly; do
 done
 echo -e "      ${GREEN}✓${RESET} Пакеты Termux готовы."
 
-# 3. Debian Container Check via direct path (100% reliable across all proot-distro versions)
+# 3. Debian Container Check (100% reliable)
 DISTRO="debian"
-ROOTFS_DIR="${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/installed-rootfs/${DISTRO}"
-
 echo -e "${CYAN}[2/5]${RESET} Проверка контейнера Debian ARM64..."
-if [ -d "$ROOTFS_DIR" ]; then
+
+if proot-distro list 2>&1 | grep -qi "${DISTRO}"; then
     echo -e "      ${GREEN}✓${RESET} Debian уже установлен."
 else
     echo -e "      ${YELLOW}→${RESET} Загрузка и распаковка чистого Debian..."
