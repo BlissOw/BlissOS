@@ -50,14 +50,16 @@ for pkg in proot-distro curl jq tar pulseaudio termux-x11-nightly; do
 done
 echo -e "      ${GREEN}✓${RESET} Пакеты Termux готовы."
 
-# 3. Debian Container Setup via proot-distro
+# 3. Debian Container Check via direct path (100% reliable across all proot-distro versions)
 DISTRO="debian"
+ROOTFS_DIR="${PREFIX:-/data/data/com.termux/files/usr}/var/lib/proot-distro/installed-rootfs/${DISTRO}"
+
 echo -e "${CYAN}[2/5]${RESET} Проверка контейнера Debian ARM64..."
-if ! proot-distro list | grep -q "${DISTRO} (installed)"; then
+if [ -d "$ROOTFS_DIR" ]; then
+    echo -e "      ${GREEN}✓${RESET} Debian уже установлен."
+else
     echo -e "      ${YELLOW}→${RESET} Загрузка и распаковка чистого Debian..."
     proot-distro install $DISTRO
-else
-    echo -e "      ${GREEN}✓${RESET} Debian уже установлен."
 fi
 
 # 4. Provision Debian with GUI & IDE dependencies
@@ -71,9 +73,12 @@ export LC_ALL=C.UTF-8
 apt-get update -y > /dev/null 2>&1
 apt-get install -y --no-install-recommends \
     ca-certificates curl git python3 python3-pip procps tar xz-utils jq nano \
-    libgtk-3-0 libnotify4 libnss3 libxss1 libasound2 libsecret-1-0 libx11-xcb1 \
+    libgtk-3-0 libnotify4 libnss3 libxss1 libsecret-1-0 libx11-xcb1 \
     libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxkbcommon0 \
     dbus-x11 x11-xserver-utils fonts-noto-color-emoji > /dev/null 2>&1
+
+# Install sound library (support Debian 12 & 13 transition)
+apt-get install -y libasound2 || apt-get install -y libasound2t64 || true
 
 # Install VS Code ARM64 engine for Antigravity GUI
 if ! command -v code > /dev/null 2>&1; then
