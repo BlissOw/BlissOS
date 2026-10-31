@@ -125,7 +125,7 @@ cat << 'LAUNCH_GUI' > "$BIN_DIR/bliss-gui"
 #!/data/data/com.termux/files/usr/bin/bash
 clear
 echo -e "\033[38;2;180;190;254m✦  B L I S S   O S  ::  A N T I G R A V I T Y   X 1 1  ✦\033[0m"
-echo -e "\033[38;2;137;220;235mЗапуск графического дисплея Termux-X11...\033[0m"
+echo -e "\033[38;2;137;220;235mЗапуск графического сервера Termux-X11...\033[0m"
 
 # 1. Audio daemon
 pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1 > /dev/null 2>&1 || true
@@ -133,21 +133,18 @@ pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth
 # 2. Companion Android App
 am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity > /dev/null 2>&1 || true
 
-# 3. Start X11 server
+# 3. Start X11 server cleanly
 export DISPLAY=:0
-TMPDIR="${TMPDIR:-/data/data/com.termux/files/usr/tmp}"
-mkdir -p "${TMPDIR}/.X11-unix"
-if ! pgrep -f "termux-x11" > /dev/null 2>&1; then
-    XDG_RUNTIME_DIR="${TMPDIR}" termux-x11 :0 -ac > /dev/null 2>&1 &
-    sleep 1.5
-fi
+pkill -f "termux-x11" > /dev/null 2>&1 || true
+XDG_RUNTIME_DIR="${TMPDIR:-/data/data/com.termux/files/usr/tmp}" termux-x11 :0 -ac > /dev/null 2>&1 &
+sleep 1.5
 
-# 4. Launch Antigravity in Fluxbox
-echo -e "\033[38;2;166;227;161m→ Открытие окна Antigravity IDE!\033[0m\n"
+# 4. Launch Antigravity inside Debian with native shared-tmp
+echo -e "\033[38;2;166;227;161m→ Открытие Antigravity IDE в Termux-X11...\033[0m\n"
 proot-distro login debian \
     --user bliss \
-    --bind "${TMPDIR}/.X11-unix:/tmp/.X11-unix" \
-    -- bash -c "export DISPLAY=:0; export PULSE_SERVER=127.0.0.1; fluxbox > /dev/null 2>&1 & sleep 1; exec code --no-sandbox --unity-launch --disable-gpu '$@'"
+    --shared-tmp \
+    -- bash -c "export DISPLAY=:0; export PULSE_SERVER=127.0.0.1; rm -rf ~/.config/Code/GPUCache ~/.config/Code/CachedData > /dev/null 2>&1; fluxbox > /dev/null 2>&1 & sleep 1; exec code --no-sandbox --disable-gpu --disable-dev-shm-usage '$@'"
 LAUNCH_GUI
 chmod +x "$BIN_DIR/bliss-gui"
 ln -sf "$BIN_DIR/bliss-gui" "$BIN_DIR/bliss-x11"
