@@ -1,44 +1,43 @@
-# ✦ BlissOS Antigravity for Termux (GUI & CLI) ✦
-> **Pocket AI Agent & Full Desktop IDE Engine for Android (Termux-X11 + Debian)**  
+# ✦ BlissOS Antigravity 2.0 for Termux (ARM64) ✦
+> **Pocket AI Agent & Dual-Engine IDE for Android (Termux-X11 + Touch Web GUI)**  
 > *Crafted by BlissOw (github.com/BlissOw)*
 
 ---
 
 ## ⚡ Описание
-**BlissOS Antigravity Edition** превращает твой Android-смартфон в полноценную портативную станцию разработки:
-* **Графический режим (GUI):** запускает настоящее окно IDE с вкладками, файловым проводником и подсветкой синтаксиса через **Termux-X11**! В режиме рабочего стола (Desktop Mode) на Axion OS это выглядит как настольный монитор.
-* **Консольный режим (CLI):** сверхбыстрый вызов через команду `bliss` или `agy` в терминале.
-* **Оптимизация под 4 ГБ RAM:** лимиты `MALLOC_ARENA_MAX=2` и `NODE_OPTIONS` предотвращают перегрев и вылеты на процессорах Qualcomm Snapdragon.
-* **Монтирование хранилища:** внутренний накопитель `/sdcard` подключен напрямую.
+**BlissOS Antigravity 2.0 Edition** превращает твой Android-смартфон в полноценную портативную станцию разработки на нативной 64-битной архитектуре (AArch64):
+* **Сенсорный Web-режим (`bliss-web`):** Запускает Antigravity IDE прямо в браузере телефона (Chrome/Edge/Firefox) на `http://localhost:8080`. Идеально для управления пальцами на AMOLED-экране, высокая плавность жестов без возни с курсором мыши!
+* **Графический режим X11 (`bliss-gui`):** Запускает настольное окно со всеми панелями и оконным менеджером Fluxbox через **Termux-X11**. В режиме рабочего стола (Desktop Mode) ощущается как полноценный компьютер.
+* **Консольный режим CLI (`bliss` / `agy`):** Сверхбыстрый вызов шелла Debian glibc в терминале.
+* **Пользователь `bliss`:** Настроен непривилегированный пользователь с правами `sudo`, убирающий ошибки песочницы root.
+* **Оптимизация:** Автоматическое подключение звука PulseAudio и хранилища `/sdcard`.
 
 ---
 
-## 🚀 Установка
+## 🚀 Установка в одну команду:
 
-### Шаг 1. Скачай приложение Termux-X11 на телефон:
-Для вывода графического окна нужно официальное приложение **Termux-X11**:
-* [Скачать Termux-X11 APK (GitHub Releases)](https://github.com/termux/termux-x11/releases) *(файл `app-arm64-v8a-debug.apk`)*
-
-### Шаг 2. Запусти команду установки в Termux:
+Вставь в Termux:
 ```bash
-curl -sSL https://raw.githubusercontent.com/BlissOw/BlissOS/main/termux_antigravity/install.sh | bash
+curl -sSL -H 'Cache-Control: no-cache' "https://raw.githubusercontent.com/BlissOw/BlissOS/main/termux_antigravity/install.sh?$(date +%s)" | bash
 ```
 
 ---
 
-## 🎮 Как запускать
+## 🎮 Как запускать:
 
-* **Графическое окно IDE:**
+* **Сенсорный режим в браузере (Рекомендуется для пальцев!):**
+  ```bash
+  bliss-web
+  ```
+  *(Termux запустит сервер и сам откроет браузер с полноценной Antigravity IDE)*.
+
+* **Оконный режим Termux-X11:**
   ```bash
   bliss-gui
   ```
-  *(Termux сам автоматически откроет окно Termux-X11, запустит аудио-сервер и откроет редактор!)*
+  *(Нужно установленное приложение [Termux-X11 APK](https://github.com/termux/termux-x11/releases))*.
 
-* **Консольный терминальный режим:**
+* **Консольный режим:**
   ```bash
   bliss
-  ```
-  или
-  ```bash
-  agy
   ```
